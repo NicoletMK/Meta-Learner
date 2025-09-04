@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot-A's Learning Adventure</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script type="module">
+        import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)";
+        import { getFirestore, doc, setDoc, collection, addDoc, getDoc } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
+
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            onAuthStateChanged,
+            getFirestore,
+            doc,
+            setDoc,
+            collection,
+            addDoc,
+            getDoc
+        };
+    </script>
+    <style>
+        @import url('[https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap)');
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #f0f4f8;
+            color: #334155;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 90%;
+            width: 768px;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease-in-out;
+        }
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin: 2rem 0;
+        }
+        .puzzle-item {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.75rem;
+            background-color: #e2e8f0;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1);
+            font-size: 2.5rem;
+            user-select: none;
+        }
+        .puzzle-item:hover:not(.flipped):not(.matched) {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .puzzle-item.flipped {
+            background-color: #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .puzzle-item.matched {
+            background-color: #34d399;
+            transform: scale(0.95);
+            cursor: default;
+            animation: pulse-out 0.5s ease-out;
+        }
+        @keyframes pulse-out {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(0.95); }
+        }
+        .button-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+        }
+        .button-primary:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-2px);
+        }
+        .button-primary:active {
+            transform: translateY(0);
+        }
+        .text-robot {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="container text-center">
+        <h1 class="text-4xl font-bold mb-4 text-blue-600">Bot-A's Learning Adventure</h1>
+        <div id="app-content"></div>
+    </div>
+
+    <script>
+        // Global state object for the application
+        const state = {
+            currentScreen: 'intro',
+            steps: 0,
+            humanSteps: 0,
+            humanSteps2: 0,
+            naiveSteps: 0,
+            metaSteps: 0,
+            puzzle: [],
+            isProcessing: false,
+            puzzleElements: [],
+            knowledgeBase: {},
+            startTime: null,
+            humanTime: null,
+            humanTime2: null,
+            naiveTime: null,
+            metaTime: null,
+            timerInterval: null,
+            db: null,
+            auth: null,
+            userId: null,
+            appId: null,
+        };
+
+        const appContent = document.getElementById('app-content');
+        const delay = 500;
+
+        // Firebase Initialization
+        async function initializeFirebase() {
+            try {
+                state.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const firebaseApp = window.firebase.initializeApp(firebaseConfig);
+                state.auth = window.firebase.getAuth(firebaseApp);
+                state.db = window.firebase.getFirestore(firebaseApp);
+
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialAuthToken) {
+                    await window.firebase.signInWithCustomToken(state.auth, initialAuthToken);
+                } else {
+                    await window.firebase.signInAnonymously(state.auth);
+                }
+
+                window.firebase.onAuthStateChanged(state.auth, (user) => {
+                    if (user) {
+                        state.userId = user.uid;
+                        showIntro();
+                    } else {
+                        state.userId = null;
+                        showIntro();
+                    }
+                });
+
+            } catch (e) {
+                console.error("Error initializing Firebase:", e);
+                // Fallback to local user experience if Firebase fails
+                showIntro();
+            }
+        }
+        
+        async function saveUserData(userData) {
+            if (!state.userId || !state.db) {
+                console.warn("User or database not available. Data will not be saved.");
+                return;
+            }
+            const userProfileRef = window.firebase.doc(state.db, `artifacts/${state.appId}/users/${state.userId}/user_data/profile`);
+            try {
+                await window.firebase.setDoc(userProfileRef, userData, { merge: true });
+                console.log("User data saved successfully!");
+            } catch (e) {
+                console.error("Error saving user data:", e);
+            }
+        }
+        
+        async function saveGameRecord() {
+            if (!state.userId || !state.db) {
+                console.warn("User or database not available. Game record will not be saved.");
+                return;
+            }
+            const gameRecordsRef = window.firebase.collection(state.db, `artifacts/${state.appId}/users/${state.userId}/game_records`);
+            const gameData = {
+                date: new Date().toISOString(),
+                human_steps_1: state.humanSteps,
+                human_time_1: state.humanTime,
+                naive_bot_steps: state.naiveSteps,
+                naive_bot_time: state.naiveTime,
+                meta_bot_steps: state.metaSteps,
+                meta_bot_time: state.metaTime,
+                human_steps_2: state.humanSteps2,
+                human_time_2: state.humanTime2,
+            };
+            try {
+                await window.firebase.addDoc(gameRecordsRef, gameData);
+                console.log("Game record saved successfully!");
+            } catch (e) {
+                console.error("Error saving game record:", e);
+            }
+        }
+
+        // Helper function to create the puzzle grid
+        function createPuzzleGrid(items) {
+            const grid = document.createElement('div');
+            grid.className = 'puzzle-grid';
+            state.puzzleElements = [];
+            items.forEach((item, index) => {
+                const puzzleItem = document.createElement('div');
+                puzzleItem.className = 'puzzle-item';
+                puzzleItem.dataset.value = item;
+                puzzleItem.dataset.index = index;
+                state.puzzleElements.push(puzzleItem);
+                grid.appendChild(puzzleItem);
+            });
+            appContent.appendChild(grid);
+        }
+
+        // Helper functions for card manipulation
+        function flipCard(index) {
+            const card = state.puzzleElements[index];
+            card.classList.add('flipped');
+            card.innerHTML = state.puzzle[index];
+            return new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        function unflipCard(index) {
+            const card = state.puzzleElements[index];
+            card.classList.remove('flipped');
+            card.innerHTML = '';
+            return new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        function matchCards(index1, index2) {
+            const card1 = state.puzzleElements[index1];
+            const card2 = state.puzzleElements[index2];
+            card1.classList.add('matched');
+            card2.classList.add('matched');
+            return new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        // Fisher-Yates shuffle algorithm
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        
+        // Timer functions
+        function startTimer() {
+            state.startTime = Date.now();
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                const elapsedTime = (Date.now() - state.startTime) / 1000;
+                const timerEl = document.getElementById('timer');
+                if (timerEl) {
+                    timerEl.innerText = elapsedTime.toFixed(2);
+                }
+            }, 100);
+        }
+
+        function stopTimer() {
+            clearInterval(state.timerInterval);
+        }
+
+        // State machine functions for each screen
+        function showIntro() {
+            state.currentScreen = 'intro';
+            appContent.innerHTML = `
+                <h2 class="text-3xl font-bold mb-4 text-blue-600">Think Like a Human!</h2>
+                <p class="mb-4 text-lg">Hello! I'm Bot-A, a little robot. I need your help to understand something called **Meta-Learning**.</p>
+                <p class="mb-4 text-lg">A simple AI can only do one task. It would have to learn from scratch every time. But the human brain is different!</p>
+                <p class="mb-6 text-lg">Your brain can "learn how to learn." It remembers what works so it can solve new problems faster. Let's see how much faster!</p>
+                <button id="startButton" class="button-primary text-xl">Let's Get Started!</button>
+            `;
+            document.getElementById('startButton').addEventListener('click', showLogin);
+        }
+        
+        function showLogin() {
+            state.currentScreen = 'login';
+            appContent.innerHTML = `
+                <h2 class="text-3xl font-bold mb-4 text-blue-600">Enter Your Information</h2>
+                <form id="loginForm" class="flex flex-col items-center">
+                    <input type="text" id="firstName" placeholder="First Name" class="input-field" required>
+                    <input type="text" id="lastName" placeholder="Last Name" class="input-field" required>
+                    <input type="number" id="age" placeholder="Age" class="input-field" min="1" required>
+                    <input type="text" id="grade" placeholder="Grade" class="input-field" required>
+                    <button type="submit" class="button-primary text-xl mt-4">Submit and Play!</button>
+                </form>
+            `;
+
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const firstName = document.getElementById('firstName').value;
+                const lastName = document.getElementById('lastName').value;
+                const age = document.getElementById('age').value;
+                const grade = document.getElementById('grade').value;
+                
+                const userData = {
+                    firstName,
+                    lastName,
+                    age: parseInt(age, 10),
+                    grade
+                };
+
+                await saveUserData(userData);
+                showHumanPractice();
+            });
+        }
+
+        function showHumanPractice() {
+            state.currentScreen = 'human-practice';
+            state.steps = 0;
+            state.puzzle = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F', 'G', 'G', 'H', 'H'];
+            shuffleArray(state.puzzle);
+            appContent.innerHTML = `
+                <p class="text-lg">First, you solve the puzzle! This is our **baseline**. We'll count your steps.</p>
+                <div class="text-xl mt-4">Your Steps: <span id="stepCounter">0</span></div>
+                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+            `;
+            createPuzzleGrid(state.puzzle);
+            humanPlay();
+            startTimer();
+        }
+
+        function showNaiveBot() {
+            state.humanSteps = state.steps;
+            state.humanTime = (Date.now() - state.startTime) / 1000;
+            stopTimer();
+            state.currentScreen = 'naive-bot';
+            state.steps = 0;
+            state.puzzle = ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5', '6', '6', '7', '7', '8', '8'];
+            shuffleArray(state.puzzle);
+            appContent.innerHTML = `
+                <h2 class="text-3xl font-bold mt-8 mb-4">Round 2: Bot-A's Naive Play</h2>
+                <p class="text-lg">Now, Bot-A will try a new puzzle with a **random, naive strategy**. Watch how many steps it takes!</p>
+                <div class="text-xl mt-4">Bot-A's Steps: <span id="stepCounter">0</span></div>
+                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+            `;
+            createPuzzleGrid(state.puzzle);
+            state.puzzleElements.forEach(item => item.style.cursor = 'default');
+            startTimer();
+            naiveBotPlay();
+        }
+        
+        function showMetaBot() {
+            state.naiveSteps = state.steps;
+            state.naiveTime = (Date.now() - state.startTime) / 1000;
+            stopTimer();
+            state.currentScreen = 'meta-bot';
+            state.steps = 0;
+            state.knowledgeBase = {};
+            state.puzzle = ['🟢', '🟢', '🟥', '🟥', '🟨', '🟨', '🟣', '🟣', '🟠', '🟠', '🔵', '🔵', '⚪', '⚪', '🟤', '🟤'];
+            shuffleArray(state.puzzle);
+            appContent.innerHTML = `
+                <h2 class="text-3xl font-bold mt-8 mb-4">Round 3: Bot-A's Meta-Learning</h2>
+                <p class="text-lg">After watching its last attempt, Bot-A has now learned a **better strategy**. It will remember the location of each card! Notice how much more efficient it is.</p>
+                <div class="text-xl mt-4">Bot-A's Steps: <span id="stepCounter">0</span></div>
+                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+            `;
+            createPuzzleGrid(state.puzzle);
+            state.puzzleElements.forEach(item => item.style.cursor = 'default');
+            startTimer();
+            metaBotPlay();
+        }
+
+        function showHumanAfterLearning() {
+            state.metaSteps = state.steps;
+            state.metaTime = (Date.now() - state.startTime) / 1000;
+            stopTimer();
+            state.currentScreen = 'human-after-learning';
+            state.steps = 0;
+            state.puzzle = ['🍰', '🍰', '🍪', '🍪', '🍩', '🍩', '🍫', '🍫', '🍬', '🍬', '🍭', '🍭', '🍎', '🍎', '🍇', '🍇'];
+            shuffleArray(state.puzzle);
+            appContent.innerHTML = `
+                <h2 class="text-3xl font-bold mt-8 mb-4">Round 4: You vs. You!</h2>
+                <p class="text-lg">Now, it's your turn again. This time, apply your own meta-learning! Remember the cards you flip and use your memory to solve the puzzle faster than before.</p>
+                <div class="text-xl mt-4">Your Steps: <span id="stepCounter">0</span></div>
+                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+            `;
+            createPuzzleGrid(state.puzzle);
+            state.puzzleElements.forEach(item => item.style.cursor = 'pointer');
+            humanPlay();
+            startTimer();
+        }
+
+        function showFinalResults() {
+            state.humanSteps2 = state.steps;
+            state.humanTime2 = (Date.now() - state.startTime) / 1000;
+            stopTimer();
+            state.currentScreen = 'final-results';
+            
+            // Save the game record to the database
+            saveGameRecord();
+
+            appContent.innerHTML = `
+                <h2 class="text-3xl font-bold mt-8 mb-4 text-green-600">The Results Are In!</h2>
+                <p class="text-xl font-bold">Bot-A's learning journey is complete. Let's compare the results:</p>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                    <div class="bg-blue-100 p-6 rounded-xl border-4 border-blue-400">
+                        <p class="text-lg font-semibold">Your Steps</p>
+                        <p class="text-5xl font-bold text-blue-600">${state.humanSteps}</p>
+                        <p class="mt-2 text-sm">Before Learning</p>
+                    </div>
+                    <div class="bg-red-100 p-6 rounded-xl border-4 border-red-400">
+                        <p class="text-lg font-semibold">Naive Bot's Steps</p>
+                        <p class="text-5xl font-bold text-red-600">${state.naiveSteps}</p>
+                        <p class="mt-2 text-sm">No Learning</p>
+                    </div>
+                    <div class="bg-green-100 p-6 rounded-xl border-4 border-green-400">
+                        <p class="text-lg font-semibold">Meta-Learning Bot's Steps</p>
+                        <p class="text-5xl font-bold text-green-600">${state.metaSteps}</p>
+                        <p class="mt-2 text-sm">Learned to Learn</p>
+                    </div>
+                    <div class="bg-purple-100 p-6 rounded-xl border-4 border-purple-400">
+                        <p class="text-lg font-semibold">Your Steps</p>
+                        <p class="text-5xl font-bold text-purple-600">${state.humanSteps2}</p>
+                        <p class="mt-2 text-sm">After Learning</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                    <div class="bg-blue-100 p-6 rounded-xl border-4 border-blue-400">
+                        <p class="text-lg font-semibold">Your Time</p>
+                        <p class="text-3xl font-bold text-blue-600">${state.humanTime.toFixed(2)}s</p>
+                    </div>
+                    <div class="bg-red-100 p-6 rounded-xl border-4 border-red-400">
+                        <p class="text-lg font-semibold">Naive Bot's Time</p>
+                        <p class="text-3xl font-bold text-red-600">${state.naiveTime.toFixed(2)}s</p>
+                    </div>
+                    <div class="bg-green-100 p-6 rounded-xl border-4 border-green-400">
+                        <p class="text-lg font-semibold">Meta-Learning Bot's Time</p>
+                        <p class="text-3xl font-bold text-green-600">${state.metaTime.toFixed(2)}s</p>
+                    </div>
+                    <div class="bg-purple-100 p-6 rounded-xl border-4 border-purple-400">
+                        <p class="text-lg font-semibold">Your Time</p>
+                        <p class="text-3xl font-bold text-purple-600">${state.humanTime2.toFixed(2)}s</p>
+                    </div>
+                </div>
+                <p class="mt-8 text-xl font-bold">Bot-A didn't just learn a puzzle—it learned **how to learn** a puzzle. Just like you did!</p>
+                <button id="resetButton" class="button-primary mt-6 text-xl">Start Over</button>
+            `;
+            document.getElementById('resetButton').addEventListener('click', showIntro);
+        }
+
+        // Game Logic for Human Player
+        function humanPlay() {
+            let firstChoice = null;
+            state.puzzleElements.forEach(item => {
+                item.addEventListener('click', async (e) => {
+                    if (state.isProcessing || e.target.classList.contains('matched') || !e.target.classList.contains('puzzle-item')) {
+                        return;
+                    }
+                    
+                    const currentChoice = e.target;
+                    state.steps++;
+                    document.getElementById('stepCounter').innerText = state.steps;
+
+                    await flipCard(parseInt(currentChoice.dataset.index));
+
+                    if (firstChoice === null) {
+                        firstChoice = currentChoice;
+                    } else {
+                        state.isProcessing = true;
+                        if (firstChoice.dataset.value === currentChoice.dataset.value && firstChoice !== currentChoice) {
+                            await matchCards(parseInt(firstChoice.dataset.index), parseInt(currentChoice.dataset.index));
+                        } else {
+                            await unflipCard(parseInt(firstChoice.dataset.index));
+                            await unflipCard(parseInt(currentChoice.dataset.index));
+                        }
+                        firstChoice = null;
+                        state.isProcessing = false;
+                        checkWin();
+                    }
+                });
+            });
+        }
+
+        // Bot Logic - Naive (Random) Strategy
+        async function naiveBotPlay() {
+            let unmatchedCards = getUnmatchedCards();
+            async function playTurn() {
+                if (unmatchedCards.length === 0) {
+                    setTimeout(showMetaBot, delay * 2);
+                    return;
+                }
+                
+                const pick1 = unmatchedCards[Math.floor(Math.random() * unmatchedCards.length)];
+                let remaining = unmatchedCards.filter(index => index !== pick1);
+                const pick2 = remaining[Math.floor(Math.random() * remaining.length)];
+
+                await flipCard(pick1);
+                await flipCard(pick2);
+                state.steps++;
+                document.getElementById('stepCounter').innerText = state.steps;
+
+                if (state.puzzle[pick1] === state.puzzle[pick2]) {
+                    await matchCards(pick1, pick2);
+                } else {
+                    await unflipCard(pick1);
+                    await unflipCard(pick2);
+                }
+                unmatchedCards = getUnmatchedCards();
+                setTimeout(playTurn, delay);
+            }
+            playTurn();
+        }
+        
+        // Bot Logic - Meta-Learning Strategy
+        async function metaBotPlay() {
+            let unmatchedCards = getUnmatchedCards();
+            state.knowledgeBase = {};
+
+            async function playTurn() {
+                if (unmatchedCards.length === 0) {
+                    setTimeout(showHumanAfterLearning, delay * 2);
+                    return;
+                }
+                
+                let pick1, pick2;
+                let foundMatch = false;
+                
+                for (const value in state.knowledgeBase) {
+                    const knownIndices = state.knowledgeBase[value].filter(i => unmatchedCards.includes(i));
+                    if (knownIndices.length === 2) {
+                        pick1 = knownIndices[0];
+                        pick2 = knownIndices[1];
+                        foundMatch = true;
+                        break;
+                    }
+                }
+                
+                if (!foundMatch) {
+                    pick1 = unmatchedCards[Math.floor(Math.random() * unmatchedCards.length)];
+                    await flipCard(pick1);
+                    state.steps++;
+                    document.getElementById('stepCounter').innerText = state.steps;
+                    
+                    const value1 = state.puzzle[pick1];
+                    if (!state.knowledgeBase[value1]) state.knowledgeBase[value1] = [];
+                    if (!state.knowledgeBase[value1].includes(pick1)) state.knowledgeBase[value1].push(pick1);
+                    
+                    const remaining = unmatchedCards.filter(i => i !== pick1);
+                    const knownPairIndex = state.knowledgeBase[value1].find(index => index !== pick1 && remaining.includes(index));
+                    
+                    if (knownPairIndex !== undefined) {
+                        pick2 = knownPairIndex;
+                        await flipCard(pick2);
+                        state.steps++;
+                        document.getElementById('stepCounter').innerText = state.steps;
+                        await matchCards(pick1, pick2);
+                    } else if (remaining.length > 0) {
+                        pick2 = remaining[Math.floor(Math.random() * remaining.length)];
+                        await flipCard(pick2);
+                        state.steps++;
+                        document.getElementById('stepCounter').innerText = state.steps;
+                        
+                        const value2 = state.puzzle[pick2];
+                        if (!state.knowledgeBase[value2]) state.knowledgeBase[value2] = [];
+                        if (!state.knowledgeBase[value2].includes(pick2)) state.knowledgeBase[value2].push(pick2);
+                        
+                        if (value1 === value2) {
+                            await matchCards(pick1, pick2);
+                        } else {
+                            await unflipCard(pick1);
+                            await unflipCard(pick2);
+                        }
+                    } else {
+                        await unflipCard(pick1);
+                    }
+                } else {
+                    await flipCard(pick1);
+                    await flipCard(pick2);
+                    state.steps++;
+                    document.getElementById('stepCounter').innerText = state.steps;
+                    await matchCards(pick1, pick2);
+                }
+                unmatchedCards = getUnmatchedCards();
+                setTimeout(playTurn, delay);
+            }
+            playTurn();
+        }
+
+        // General functions
+        function getUnmatchedCards() {
+            const unmatched = [];
+            state.puzzleElements.forEach((card, index) => {
+                if (!card.classList.contains('matched')) {
+                    unmatched.push(index);
+                }
+            });
+            return unmatched;
+        }
+
+        function checkWin() {
+            const matchedItems = document.querySelectorAll('.puzzle-item.matched');
+            if (matchedItems.length === state.puzzle.length) {
+                if (state.currentScreen === 'human-practice') {
+                    setTimeout(showNaiveBot, 1500);
+                } else if (state.currentScreen === 'human-after-learning') {
+                    setTimeout(showFinalResults, 1500);
+                }
+            }
+        }
+
+        // Start the application
+        window.onload = function() {
+            initializeFirebase();
+        };
+
+    </script>
+</body>
+</html>
