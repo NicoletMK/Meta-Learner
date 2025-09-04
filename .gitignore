@@ -1,0 +1,9 @@
+# Firebase debug logs
+firebase-debug.log
+
+# Environment/config files
+.env
+*.key
+*.pem
+*.json
+
