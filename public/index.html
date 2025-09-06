@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot-A's Learning Adventure</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <title>Meta Learning With Bot Sparkle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
-        import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)";
-        import { getFirestore, doc, setDoc, collection, addDoc, getDoc } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         window.firebase = {
             initializeApp,
@@ -25,31 +25,52 @@
         };
     </script>
     <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap');
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: 'Fredoka', sans-serif;
-            background-color: #f0f4f8;
-            color: #334155;
+            background: linear-gradient(to bottom right, #f8fafc, #e2e8f0);
+            color: #1a202c;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
             text-align: center;
+            overflow-y: hidden;
         }
+
         .container {
-            max-width: 90%;
-            width: 768px;
+            max-width: 95%;
+            width: 95%;
             padding: 2rem;
             background-color: #fff;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 2rem;
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), 0 5px 10px -5px rgba(0, 0, 0, 0.04);
             transition: all 0.3s ease-in-out;
+            border: 4px solid #a5b4fc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+        @media (min-width: 1024px) {
+            .container {
+                width: auto;
+                max-width: 1024px;
+            }
         }
         .puzzle-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 0.75rem;
-            margin: 2rem 0;
+            gap: 1rem;
+            margin: 2rem auto;
+            max-width: 600px;
         }
         .puzzle-item {
             width: 100%;
@@ -57,48 +78,55 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 0.75rem;
-            background-color: #e2e8f0;
+            border-radius: 1rem;
+            background-color: #cbd5e1;
             cursor: pointer;
             transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
-            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1);
-            font-size: 2.5rem;
+            box-shadow: inset 0 -6px 0 rgba(0,0,0,0.2);
+            font-size: clamp(1rem, 8vw, 3rem);
             user-select: none;
+            color: #1a202c;
+            font-weight: bold;
         }
         .puzzle-item:hover:not(.flipped):not(.matched) {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.15);
         }
         .puzzle-item.flipped {
             background-color: #fff;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.1);
         }
         .puzzle-item.matched {
-            background-color: #34d399;
+            background-color: #6ee7b7;
             transform: scale(0.95);
             cursor: default;
-            animation: pulse-out 0.5s ease-out;
+            animation: pop-match 0.5s ease-out;
         }
-        @keyframes pulse-out {
+        @keyframes pop-match {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.1); }
             100% { transform: scale(0.95); }
         }
         .button-primary {
-            background-color: #2563eb;
+            background-color: #818cf8;
             color: white;
-            padding: 0.75rem 2rem;
+            padding: 0.75rem 2.5rem;
             border-radius: 9999px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease-in-out;
             cursor: pointer;
+            border: 3px solid #6366f1;
+            font-size: 1.5rem;
+            font-weight: bold;
         }
         .button-primary:hover {
-            background-color: #1d4ed8;
-            transform: translateY(-2px);
+            background-color: #6366f1;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
         }
         .button-primary:active {
             transform: translateY(0);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
         .text-robot {
             color: #ef4444;
@@ -106,21 +134,57 @@
         }
         .input-field {
             width: 100%;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid #d1d5db;
+            max-width: 300px;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            border: 2px solid #a5b4fc;
             margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        .page-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #4f46e5;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .round-card {
+            background-color: #f0f4f8;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 3px solid #c7d2fe;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s ease-in-out;
+        }
+        .round-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+        }
+        .award-icon {
+            font-size: 5rem;
+            line-height: 1;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        .processing-cursor {
+            cursor: wait !important;
         }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 flex items-center justify-center">
     <div class="container text-center">
-        <h1 class="text-4xl font-bold mb-4 text-blue-600">Bot-A's Learning Adventure</h1>
+        <h1 class="page-title">🧠 Meta Learning With Bot Sparkle 🤖</h1>
         <div id="app-content"></div>
     </div>
 
     <script>
-        // Global state object for the application
         const state = {
             currentScreen: 'intro',
             steps: 0,
@@ -147,7 +211,6 @@
         const appContent = document.getElementById('app-content');
         const delay = 500;
 
-        // Firebase Initialization
         async function initializeFirebase() {
             try {
                 state.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -175,7 +238,6 @@
 
             } catch (e) {
                 console.error("Error initializing Firebase:", e);
-                // Fallback to local user experience if Firebase fails
                 showIntro();
             }
         }
@@ -219,7 +281,6 @@
             }
         }
 
-        // Helper function to create the puzzle grid
         function createPuzzleGrid(items) {
             const grid = document.createElement('div');
             grid.className = 'puzzle-grid';
@@ -235,7 +296,6 @@
             appContent.appendChild(grid);
         }
 
-        // Helper functions for card manipulation
         function flipCard(index) {
             const card = state.puzzleElements[index];
             card.classList.add('flipped');
@@ -255,10 +315,11 @@
             const card2 = state.puzzleElements[index2];
             card1.classList.add('matched');
             card2.classList.add('matched');
+            card1.removeEventListener('click', handleCardClick);
+            card2.removeEventListener('click', handleCardClick);
             return new Promise(resolve => setTimeout(resolve, delay));
         }
         
-        // Fisher-Yates shuffle algorithm
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -266,7 +327,6 @@
             }
         }
         
-        // Timer functions
         function startTimer() {
             state.startTime = Date.now();
             if (state.timerInterval) clearInterval(state.timerInterval);
@@ -283,15 +343,14 @@
             clearInterval(state.timerInterval);
         }
 
-        // State machine functions for each screen
         function showIntro() {
             state.currentScreen = 'intro';
             appContent.innerHTML = `
-                <h2 class="text-3xl font-bold mb-4 text-blue-600">Think Like a Human!</h2>
-                <p class="mb-4 text-lg">Hello! I'm Bot-A, a little robot. I need your help to understand something called **Meta-Learning**.</p>
-                <p class="mb-4 text-lg">A simple AI can only do one task. It would have to learn from scratch every time. But the human brain is different!</p>
-                <p class="mb-6 text-lg">Your brain can "learn how to learn." It remembers what works so it can solve new problems faster. Let's see how much faster!</p>
-                <button id="startButton" class="button-primary text-xl">Let's Get Started!</button>
+                <h2 class="text-3xl font-bold mb-4 text-purple-600">🧠 Think Like a Human! 🧠</h2>
+                <p class="mb-4 text-xl">Hello! I'm Bot Sparkle, your little robot friend. I need your help to understand something special: meta-learning.</p>
+                <p class="mb-4 text-xl">A simple bot like me can only solve one puzzle at a time. But your amazing brain can "learn how to learn" from past experiences!</p>
+                <p class="mb-6 text-xl">Let's see if your brain's super memory can solve a puzzle faster than a robot's simple memory. Are you ready for the adventure?</p>
+                <button id="startButton" class="button-primary">Let's Begin!</button>
             `;
             document.getElementById('startButton').addEventListener('click', showLogin);
         }
@@ -299,13 +358,14 @@
         function showLogin() {
             state.currentScreen = 'login';
             appContent.innerHTML = `
-                <h2 class="text-3xl font-bold mb-4 text-blue-600">Enter Your Information</h2>
+                <h2 class="text-3xl font-bold mb-4 text-purple-600">Tell Us About You!</h2>
+                <p class="mb-4 text-lg">Help Bot Sparkle learn by sharing a little bit about yourself.</p>
                 <form id="loginForm" class="flex flex-col items-center">
-                    <input type="text" id="firstName" placeholder="First Name" class="input-field" required>
-                    <input type="text" id="lastName" placeholder="Last Name" class="input-field" required>
-                    <input type="number" id="age" placeholder="Age" class="input-field" min="1" required>
-                    <input type="text" id="grade" placeholder="Grade" class="input-field" required>
-                    <button type="submit" class="button-primary text-xl mt-4">Submit and Play!</button>
+                    <input type="text" id="firstName" placeholder="Your First Name" class="input-field" required>
+                    <input type="text" id="lastName" placeholder="Your Last Name" class="input-field" required>
+                    <input type="number" id="age" placeholder="Your Age" class="input-field" min="1" required>
+                    <input type="text" id="grade" placeholder="Your Grade" class="input-field" required>
+                    <button type="submit" class="button-primary mt-4">Play!</button>
                 </form>
             `;
 
@@ -331,12 +391,15 @@
         function showHumanPractice() {
             state.currentScreen = 'human-practice';
             state.steps = 0;
-            state.puzzle = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F', 'G', 'G', 'H', 'H'];
+            state.puzzle = ['🐱', '🐱', '🐶', '🐶', '🐻', '🐻', '🦊', '🦊', '🐸', '🐸', '🐨', '🐨', '🐼', '🐼', '🐰', '🐰'];
             shuffleArray(state.puzzle);
             appContent.innerHTML = `
-                <p class="text-lg">First, you solve the puzzle! This is our **baseline**. We'll count your steps.</p>
-                <div class="text-xl mt-4">Your Steps: <span id="stepCounter">0</span></div>
-                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+                <h2 class="text-3xl font-bold mb-4 text-blue-600">Round 1: You vs. the Puzzle!</h2>
+                <p class="text-xl mb-4">You're the superstar! Let's see how fast you can find all the matching pairs. This is our starting point!</p>
+                <div class="flex justify-center items-center space-x-8 text-2xl font-bold mt-4">
+                    <div class="text-purple-600">Steps: <span id="stepCounter">0</span></div>
+                    <div class="text-green-600">Time: <span id="timer">0.00</span>s</div>
+                </div>
             `;
             createPuzzleGrid(state.puzzle);
             humanPlay();
@@ -349,13 +412,15 @@
             stopTimer();
             state.currentScreen = 'naive-bot';
             state.steps = 0;
-            state.puzzle = ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5', '6', '6', '7', '7', '8', '8'];
+            state.puzzle = ['🐙', '🐙', '🐠', '🐠', '🐳', '🐳', '🐬', '🐬', '🦀', '🦀', '🌟', '🌟', '🦈', '🦈', '🐢', '🐢'];
             shuffleArray(state.puzzle);
             appContent.innerHTML = `
-                <h2 class="text-3xl font-bold mt-8 mb-4">Round 2: Bot-A's Naive Play</h2>
-                <p class="text-lg">Now, Bot-A will try a new puzzle with a **random, naive strategy**. Watch how many steps it takes!</p>
-                <div class="text-xl mt-4">Bot-A's Steps: <span id="stepCounter">0</span></div>
-                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+                <h2 class="text-3xl font-bold mb-4 text-red-600">Round 2: Watch Bot Sparkle!</h2>
+                <p class="text-xl mb-4">Bot Sparkle will try to solve a new puzzle with a random guess strategy. It doesn't remember anything from the first round. Let's see how it does!</p>
+                <div class="flex justify-center items-center space-x-8 text-2xl font-bold mt-4">
+                    <div class="text-purple-600">Steps: <span id="stepCounter">0</span></div>
+                    <div class="text-green-600">Time: <span id="timer">0.00</span>s</div>
+                </div>
             `;
             createPuzzleGrid(state.puzzle);
             state.puzzleElements.forEach(item => item.style.cursor = 'default');
@@ -370,13 +435,15 @@
             state.currentScreen = 'meta-bot';
             state.steps = 0;
             state.knowledgeBase = {};
-            state.puzzle = ['🟢', '🟢', '🟥', '🟥', '🟨', '🟨', '🟣', '🟣', '🟠', '🟠', '🔵', '🔵', '⚪', '⚪', '🟤', '🟤'];
+            state.puzzle = ['⭐', '⭐', '☁️', '☁️', '☀️', '☀️', '🌈', '🌈', '⚡', '⚡', '❄️', '❄️', '🌙', '🌙', '☔', '☔'];
             shuffleArray(state.puzzle);
             appContent.innerHTML = `
-                <h2 class="text-3xl font-bold mt-8 mb-4">Round 3: Bot-A's Meta-Learning</h2>
-                <p class="text-lg">After watching its last attempt, Bot-A has now learned a **better strategy**. It will remember the location of each card! Notice how much more efficient it is.</p>
-                <div class="text-xl mt-4">Bot-A's Steps: <span id="stepCounter">0</span></div>
-                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+                <h2 class="text-3xl font-bold mb-4 text-green-600">Round 3: Smart Bot Sparkle!</h2>
+                <p class="text-xl mb-4">Bot Sparkle has now learned a better strategy. It will remember the location of each card it flips! Look at how much faster it is now.</p>
+                <div class="flex justify-center items-center space-x-8 text-2xl font-bold mt-4">
+                    <div class="text-purple-600">Steps: <span id="stepCounter">0</span></div>
+                    <div class="text-green-600">Time: <span id="timer">0.00</span>s</div>
+                </div>
             `;
             createPuzzleGrid(state.puzzle);
             state.puzzleElements.forEach(item => item.style.cursor = 'default');
@@ -390,13 +457,15 @@
             stopTimer();
             state.currentScreen = 'human-after-learning';
             state.steps = 0;
-            state.puzzle = ['🍰', '🍰', '🍪', '🍪', '🍩', '🍩', '🍫', '🍫', '🍬', '🍬', '🍭', '🍭', '🍎', '🍎', '🍇', '🍇'];
+            state.puzzle = ['🍰', '🍰', '🍪', '🍪', '🍩', '🍩', '🍫', '🍫', '🍬', '🍬', '🍭', '🍭', '🍔', '🍔', '🍟', '🍟'];
             shuffleArray(state.puzzle);
             appContent.innerHTML = `
-                <h2 class="text-3xl font-bold mt-8 mb-4">Round 4: You vs. You!</h2>
-                <p class="text-lg">Now, it's your turn again. This time, apply your own meta-learning! Remember the cards you flip and use your memory to solve the puzzle faster than before.</p>
-                <div class="text-xl mt-4">Your Steps: <span id="stepCounter">0</span></div>
-                <div class="text-xl mt-2">Time: <span id="timer">0.00</span>s</div>
+                <h2 class="text-3xl font-bold mb-4 text-yellow-600">Round 4: You're a Memory Champion!</h2>
+                <p class="text-xl mb-4">It's your turn again! Use your amazing memory and experience to solve this puzzle. Can you beat your own first score?</p>
+                <div class="flex justify-center items-center space-x-8 text-2xl font-bold mt-4">
+                    <div class="text-purple-600">Steps: <span id="stepCounter">0</span></div>
+                    <div class="text-green-600">Time: <span id="timer">0.00</span>s</div>
+                </div>
             `;
             createPuzzleGrid(state.puzzle);
             state.puzzleElements.forEach(item => item.style.cursor = 'pointer');
@@ -410,198 +479,203 @@
             stopTimer();
             state.currentScreen = 'final-results';
             
-            // Save the game record to the database
             saveGameRecord();
 
             appContent.innerHTML = `
-                <h2 class="text-3xl font-bold mt-8 mb-4 text-green-600">The Results Are In!</h2>
-                <p class="text-xl font-bold">Bot-A's learning journey is complete. Let's compare the results:</p>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                    <div class="bg-blue-100 p-6 rounded-xl border-4 border-blue-400">
-                        <p class="text-lg font-semibold">Your Steps</p>
-                        <p class="text-5xl font-bold text-blue-600">${state.humanSteps}</p>
-                        <p class="mt-2 text-sm">Before Learning</p>
+                <div class="flex flex-col items-center">
+                    <h2 class="text-4xl font-bold mb-2 text-green-600">🏆 You Did It! You're learning to learn! 🏆</h2>
+                    <p class="text-2xl font-bold mb-6 text-indigo-700">Let's look at the amazing progress that you and Bot Sparkle made!</p>
+                </div>
+                <div class="grid results-grid gap-6 mt-6">
+                    <div class="round-card bg-blue-100 border-blue-400">
+                        <div class="award-icon">🥇</div>
+                        <p class="text-lg font-semibold text-blue-800 mt-2">Your First Try</p>
+                        <div class="text-4xl font-bold text-blue-600">${state.humanSteps}</div>
+                        <p class="text-sm font-semibold text-blue-600">Steps</p>
+                        <p class="text-xl font-bold text-blue-600 mt-1">${state.humanTime.toFixed(2)}s</p>
                     </div>
-                    <div class="bg-red-100 p-6 rounded-xl border-4 border-red-400">
-                        <p class="text-lg font-semibold">Naive Bot's Steps</p>
-                        <p class="text-5xl font-bold text-red-600">${state.naiveSteps}</p>
-                        <p class="mt-2 text-sm">No Learning</p>
+                    <div class="round-card bg-red-100 border-red-400">
+                        <div class="award-icon">🤖</div>
+                        <p class="text-lg font-semibold text-red-800 mt-2">Random Robot</p>
+                        <div class="text-4xl font-bold text-red-600">${state.naiveSteps}</div>
+                        <p class="text-sm font-semibold text-red-600">Steps</p>
+                        <p class="text-xl font-bold text-red-600 mt-1">${state.naiveTime.toFixed(2)}s</p>
                     </div>
-                    <div class="bg-green-100 p-6 rounded-xl border-4 border-green-400">
-                        <p class="text-lg font-semibold">Meta-Learning Bot's Steps</p>
-                        <p class="text-5xl font-bold text-green-600">${state.metaSteps}</p>
-                        <p class="mt-2 text-sm">Learned to Learn</p>
+                    <div class="round-card bg-green-100 border-green-400">
+                        <div class="award-icon">🧠</div>
+                        <p class="text-lg font-semibold text-green-800 mt-2">Smart Robot</p>
+                        <div class="text-4xl font-bold text-green-600">${state.metaSteps}</div>
+                        <p class="text-sm font-semibold text-green-600">Steps</p>
+                        <p class="text-xl font-bold text-green-600 mt-1">${state.metaTime.toFixed(2)}s</p>
                     </div>
-                    <div class="bg-purple-100 p-6 rounded-xl border-4 border-purple-400">
-                        <p class="text-lg font-semibold">Your Steps</p>
-                        <p class="text-5xl font-bold text-purple-600">${state.humanSteps2}</p>
-                        <p class="mt-2 text-sm">After Learning</p>
+                    <div class="round-card bg-purple-100 border-purple-400">
+                        <div class="award-icon">👑</div>
+                        <p class="text-lg font-semibold text-purple-800 mt-2">Your Second Try</p>
+                        <div class="text-4xl font-bold text-purple-600">${state.humanSteps2}</div>
+                        <p class="text-sm font-semibold text-purple-600">Steps</p>
+                        <p class="text-xl font-bold text-purple-600 mt-1">${state.humanTime2.toFixed(2)}s</p>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                    <div class="bg-blue-100 p-6 rounded-xl border-4 border-blue-400">
-                        <p class="text-lg font-semibold">Your Time</p>
-                        <p class="text-3xl font-bold text-blue-600">${state.humanTime.toFixed(2)}s</p>
-                    </div>
-                    <div class="bg-red-100 p-6 rounded-xl border-4 border-red-400">
-                        <p class="text-lg font-semibold">Naive Bot's Time</p>
-                        <p class="text-3xl font-bold text-red-600">${state.naiveTime.toFixed(2)}s</p>
-                    </div>
-                    <div class="bg-green-100 p-6 rounded-xl border-4 border-green-400">
-                        <p class="text-lg font-semibold">Meta-Learning Bot's Time</p>
-                        <p class="text-3xl font-bold text-green-600">${state.metaTime.toFixed(2)}s</p>
-                    </div>
-                    <div class="bg-purple-100 p-6 rounded-xl border-4 border-purple-400">
-                        <p class="text-lg font-semibold">Your Time</p>
-                        <p class="text-3xl font-bold text-purple-600">${state.humanTime2.toFixed(2)}s</p>
-                    </div>
-                </div>
-                <p class="mt-8 text-xl font-bold">Bot-A didn't just learn a puzzle—it learned **how to learn** a puzzle. Just like you did!</p>
-                <button id="resetButton" class="button-primary mt-6 text-xl">Start Over</button>
+                <p class="mt-8 text-2xl font-bold text-indigo-700">Just like Bot Sparkle, you didn't just solve a puzzle—you learned how to learn a puzzle!</p>
+                <p class="mt-2 text-xl text-gray-600">You proved that practice and memory make you super-smart!</p>
+                <button id="resetButton" class="button-primary mt-6">Play Again!</button>
             `;
             document.getElementById('resetButton').addEventListener('click', showIntro);
         }
 
-        // Game Logic for Human Player
+        let firstChoice = null;
+
+        async function handleCardClick(e) {
+            // New logic: Only allow clicks if no other cards are being processed.
+            if (document.body.classList.contains('processing-cursor') || e.target.classList.contains('matched')) {
+                return;
+            }
+
+            const clickedCard = e.target;
+            
+            // If the card is already flipped, do nothing.
+            if (clickedCard.classList.contains('flipped')) {
+                return;
+            }
+
+            document.body.classList.add('processing-cursor');
+            
+            state.steps++;
+            document.getElementById('stepCounter').innerText = state.steps;
+
+            await flipCard(parseInt(clickedCard.dataset.index));
+
+            if (firstChoice === null) {
+                firstChoice = clickedCard;
+                document.body.classList.remove('processing-cursor');
+            } else {
+                if (firstChoice.dataset.value === clickedCard.dataset.value) {
+                    await matchCards(parseInt(firstChoice.dataset.index), parseInt(clickedCard.dataset.index));
+                } else {
+                    await unflipCard(parseInt(firstChoice.dataset.index));
+                    await unflipCard(parseInt(clickedCard.dataset.index));
+                }
+                
+                firstChoice = null;
+                document.body.classList.remove('processing-cursor');
+                checkWin();
+            }
+        }
+
         function humanPlay() {
-            let firstChoice = null;
+            firstChoice = null;
             state.puzzleElements.forEach(item => {
-                item.addEventListener('click', async (e) => {
-                    if (state.isProcessing || e.target.classList.contains('matched') || !e.target.classList.contains('puzzle-item')) {
-                        return;
-                    }
-                    
-                    const currentChoice = e.target;
-                    state.steps++;
-                    document.getElementById('stepCounter').innerText = state.steps;
-
-                    await flipCard(parseInt(currentChoice.dataset.index));
-
-                    if (firstChoice === null) {
-                        firstChoice = currentChoice;
-                    } else {
-                        state.isProcessing = true;
-                        if (firstChoice.dataset.value === currentChoice.dataset.value && firstChoice !== currentChoice) {
-                            await matchCards(parseInt(firstChoice.dataset.index), parseInt(currentChoice.dataset.index));
-                        } else {
-                            await unflipCard(parseInt(firstChoice.dataset.index));
-                            await unflipCard(parseInt(currentChoice.dataset.index));
-                        }
-                        firstChoice = null;
-                        state.isProcessing = false;
-                        checkWin();
-                    }
-                });
+                item.removeEventListener('click', handleCardClick);
+                item.addEventListener('click', handleCardClick);
             });
         }
 
-        // Bot Logic - Naive (Random) Strategy
         async function naiveBotPlay() {
-            let unmatchedCards = getUnmatchedCards();
+            let unmatchedIndices = getUnmatchedCardIndices();
+            
             async function playTurn() {
-                if (unmatchedCards.length === 0) {
+                if (unmatchedIndices.length === 0) {
                     setTimeout(showMetaBot, delay * 2);
                     return;
                 }
                 
-                const pick1 = unmatchedCards[Math.floor(Math.random() * unmatchedCards.length)];
-                let remaining = unmatchedCards.filter(index => index !== pick1);
-                const pick2 = remaining[Math.floor(Math.random() * remaining.length)];
+                const pick1Index = unmatchedIndices[Math.floor(Math.random() * unmatchedIndices.length)];
+                let remainingIndices = unmatchedIndices.filter(index => index !== pick1Index);
+                const pick2Index = remainingIndices[Math.floor(Math.random() * remainingIndices.length)];
 
-                await flipCard(pick1);
-                await flipCard(pick2);
+                await flipCard(pick1Index);
+                await flipCard(pick2Index);
                 state.steps++;
                 document.getElementById('stepCounter').innerText = state.steps;
 
-                if (state.puzzle[pick1] === state.puzzle[pick2]) {
-                    await matchCards(pick1, pick2);
+                if (state.puzzle[pick1Index] === state.puzzle[pick2Index]) {
+                    await matchCards(pick1Index, pick2Index);
                 } else {
-                    await unflipCard(pick1);
-                    await unflipCard(pick2);
+                    await unflipCard(pick1Index);
+                    await unflipCard(pick2Index);
                 }
-                unmatchedCards = getUnmatchedCards();
+
+                unmatchedIndices = getUnmatchedCardIndices();
                 setTimeout(playTurn, delay);
             }
             playTurn();
         }
         
-        // Bot Logic - Meta-Learning Strategy
         async function metaBotPlay() {
-            let unmatchedCards = getUnmatchedCards();
+            let unmatchedIndices = getUnmatchedCardIndices();
             state.knowledgeBase = {};
 
             async function playTurn() {
-                if (unmatchedCards.length === 0) {
+                if (unmatchedIndices.length === 0) {
                     setTimeout(showHumanAfterLearning, delay * 2);
                     return;
                 }
                 
-                let pick1, pick2;
-                let foundMatch = false;
+                let pick1Index, pick2Index;
+                let foundKnownMatch = false;
                 
                 for (const value in state.knowledgeBase) {
-                    const knownIndices = state.knowledgeBase[value].filter(i => unmatchedCards.includes(i));
+                    const knownIndices = state.knowledgeBase[value].filter(i => unmatchedIndices.includes(i));
                     if (knownIndices.length === 2) {
-                        pick1 = knownIndices[0];
-                        pick2 = knownIndices[1];
-                        foundMatch = true;
+                        pick1Index = knownIndices[0];
+                        pick2Index = knownIndices[1];
+                        foundKnownMatch = true;
                         break;
                     }
                 }
                 
-                if (!foundMatch) {
-                    pick1 = unmatchedCards[Math.floor(Math.random() * unmatchedCards.length)];
-                    await flipCard(pick1);
+                if (!foundKnownMatch) {
+                    pick1Index = unmatchedIndices[Math.floor(Math.random() * unmatchedIndices.length)];
+                    await flipCard(pick1Index);
                     state.steps++;
                     document.getElementById('stepCounter').innerText = state.steps;
                     
-                    const value1 = state.puzzle[pick1];
+                    const value1 = state.puzzle[pick1Index];
                     if (!state.knowledgeBase[value1]) state.knowledgeBase[value1] = [];
-                    if (!state.knowledgeBase[value1].includes(pick1)) state.knowledgeBase[value1].push(pick1);
+                    if (!state.knowledgeBase[value1].includes(pick1Index)) state.knowledgeBase[value1].push(pick1Index);
                     
-                    const remaining = unmatchedCards.filter(i => i !== pick1);
-                    const knownPairIndex = state.knowledgeBase[value1].find(index => index !== pick1 && remaining.includes(index));
+                    const remainingIndices = unmatchedIndices.filter(i => i !== pick1Index);
+                    const knownPairIndex = state.knowledgeBase[value1].find(index => index !== pick1Index && remainingIndices.includes(index));
                     
                     if (knownPairIndex !== undefined) {
-                        pick2 = knownPairIndex;
-                        await flipCard(pick2);
+                        pick2Index = knownPairIndex;
+                        await flipCard(pick2Index);
                         state.steps++;
                         document.getElementById('stepCounter').innerText = state.steps;
-                        await matchCards(pick1, pick2);
-                    } else if (remaining.length > 0) {
-                        pick2 = remaining[Math.floor(Math.random() * remaining.length)];
-                        await flipCard(pick2);
+                        await matchCards(pick1Index, pick2Index);
+                    } else if (remainingIndices.length > 0) {
+                        pick2Index = remainingIndices[Math.floor(Math.random() * remainingIndices.length)];
+                        await flipCard(pick2Index);
                         state.steps++;
                         document.getElementById('stepCounter').innerText = state.steps;
                         
-                        const value2 = state.puzzle[pick2];
+                        const value2 = state.puzzle[pick2Index];
                         if (!state.knowledgeBase[value2]) state.knowledgeBase[value2] = [];
-                        if (!state.knowledgeBase[value2].includes(pick2)) state.knowledgeBase[value2].push(pick2);
+                        if (!state.knowledgeBase[value2].includes(pick2Index)) state.knowledgeBase[value2].push(pick2Index);
                         
                         if (value1 === value2) {
-                            await matchCards(pick1, pick2);
+                            await matchCards(pick1Index, pick2Index);
                         } else {
-                            await unflipCard(pick1);
-                            await unflipCard(pick2);
+                            await unflipCard(pick1Index);
+                            await unflipCard(pick2Index);
                         }
                     } else {
-                        await unflipCard(pick1);
+                        await unflipCard(pick1Index);
                     }
                 } else {
-                    await flipCard(pick1);
-                    await flipCard(pick2);
+                    await flipCard(pick1Index);
+                    await flipCard(pick2Index);
                     state.steps++;
                     document.getElementById('stepCounter').innerText = state.steps;
-                    await matchCards(pick1, pick2);
+                    await matchCards(pick1Index, pick2Index);
                 }
-                unmatchedCards = getUnmatchedCards();
+                unmatchedIndices = getUnmatchedCardIndices();
                 setTimeout(playTurn, delay);
             }
             playTurn();
         }
 
-        // General functions
-        function getUnmatchedCards() {
+        function getUnmatchedCardIndices() {
             const unmatched = [];
             state.puzzleElements.forEach((card, index) => {
                 if (!card.classList.contains('matched')) {
@@ -622,11 +696,9 @@
             }
         }
 
-        // Start the application
         window.onload = function() {
             initializeFirebase();
         };
-
     </script>
 </body>
 </html>
